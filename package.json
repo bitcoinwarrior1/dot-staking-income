@@ -1,0 +1,25 @@
+{
+  "name": "dot-staking-tax",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "debug": "nodemon"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/James-Sangalli/dot-staking-tax.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/James-Sangalli/dot-staking-tax/issues"
+  },
+  "homepage": "https://github.com/James-Sangalli/dot-staking-tax#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "superagent": "^6.1.0"
+  }
+}
