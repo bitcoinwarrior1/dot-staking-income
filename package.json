@@ -1,5 +1,5 @@
 {
-  "name": "dot-staking-tax",
+  "name": "dot-staking-income",
   "version": "1.0.0",
   "description": "",
   "main": "app.js",
@@ -9,15 +9,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/James-Sangalli/dot-staking-tax.git"
+    "url": "git+https://github.com/James-Sangalli/dot-staking-income.git"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/James-Sangalli/dot-staking-tax/issues"
+    "url": "https://github.com/James-Sangalli/dot-staking-income/issues"
   },
-  "homepage": "https://github.com/James-Sangalli/dot-staking-tax#readme",
+  "homepage": "https://github.com/James-Sangalli/dot-staking-income#readme",
   "dependencies": {
     "express": "^4.17.1",
     "superagent": "^6.1.0"
