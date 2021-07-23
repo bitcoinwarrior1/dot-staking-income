@@ -30,11 +30,13 @@ module.exports = class Helpers {
         for(const index in result.list) {
             const timestamp = result.list[index].block_timestamp;
             const amount = result.list[index].amount;
+            result.list[index].amount = amount / this.decimal;
             const priceAtTime = await this.getPrice(timestamp, amount, "USD");
             const valueOfRewardUSD = parseFloat((priceAtTime * (amount / this.decimal)).toFixed(2)); // USD is only 2dp
             result.list[index].usd_price_per_coin = priceAtTime;
             result.list[index].usd_value = valueOfRewardUSD;
             result.total_value_usd += valueOfRewardUSD;
+            delete result.list[index].params;
         }
         result.total_value_usd = parseFloat(result.total_value_usd.toFixed(2));
         return result;
