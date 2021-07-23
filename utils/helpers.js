@@ -4,16 +4,22 @@ module.exports = class Helpers {
     
     constructor(address, network) {
         const endpoints = {
-            "polkadot": "https://polkadot.api.subscan.io",
-            "kusama": "https://kusama.api.subscan.io"
+            "DOT": "https://polkadot.api.subscan.io",
+            "KSM": "https://kusama.api.subscan.io"
         }
-        this.address = address; 
+        const decimals = {
+            "DOT": 1e10,
+            "KSM": 1e12
+        }
+        this.address = address;
+        this.network = network;
+        this.decimal = decimals[network];
         this.endpoint = endpoints[network];
         this.apiKey = process.env.API_KEY;
     }
 
     async getObjectWithValue() {
-        let result = await request.post(`${this.endpoint}/api/scan/staking_history`, {
+        let result = await request.post(`${this.endpoint}/api/scan/account/reward_slash`, {
             "X-API-Key": this.apiKey,
             "row": 20,
             "page": 0,
@@ -21,23 +27,40 @@ module.exports = class Helpers {
         });
         result = result.body.data;
         result.total_value_usd = 0;
-        for(const index in result.history) {
-            const timestamp = result.history[index].block_timestamp;
-            const reward = result.history[index].reward;
-            const priceAtTime = await this.getPrice(timestamp, this.endpoint);
-            const valueUSD = priceAtTime * reward;
-            result.history[index].usd = valueUSD;
-            result.total_value_usd += valueUSD;
+        for(const index in result.list) {
+            const timestamp = result.list[index].block_timestamp;
+            const amount = result.list[index].amount;
+            const priceAtTime = await this.getPrice(timestamp, amount, "USD");
+            const valueOfRewardUSD = parseFloat((priceAtTime * (amount / this.decimal)).toFixed(2)); // USD is only 2dp
+            result.list[index].usd_price_per_coin = priceAtTime;
+            result.list[index].usd_value = valueOfRewardUSD;
+            result.total_value_usd += valueOfRewardUSD;
         }
+        result.total_value_usd = parseFloat(result.total_value_usd.toFixed(2));
         return result;
     }
 
-    async getPrice(time) {
-        const result = await request.post(`${this.endpoint}/api/open/price`, {
-            "X-API-Key": this.apiKey,
-            "time": time
-        });
-        return result.data.price;
+    timeout(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async getPrice(time, amount, currency) {
+        try {
+            const result = await request.post(`${this.endpoint}/api/open/price_converter`, {
+                "X-API-Key": this.apiKey,
+                "time": time,
+                "value": 1,
+                "from": this.network,
+                "quote": currency
+            });
+            const output = parseFloat(result.body.data.output).toFixed(2);
+            return parseFloat(output);
+        } catch (e) {
+            console.error(e);
+            await this.timeout(1000);
+            return this.getPrice(time, amount, currency);
+        }
+
     }
     
 }
