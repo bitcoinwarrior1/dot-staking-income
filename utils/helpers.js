@@ -9,16 +9,17 @@ module.exports = class Helpers {
         }
         this.address = address; 
         this.endpoint = endpoints[network];
-        this.apiKey = "";
+        this.apiKey = process.env.API_KEY;
     }
 
     async getObjectWithValue() {
-        const result = await request.post(`${this.endpoint}/api/scan/staking_history`, {
+        let result = await request.post(`${this.endpoint}/api/scan/staking_history`, {
             "X-API-Key": this.apiKey,
             "row": 20,
             "page": 0,
             "address": this.address
         });
+        result = result.body.data;
         result.total_value_usd = 0;
         for(const index in result.history) {
             const timestamp = result.history[index].block_timestamp;
