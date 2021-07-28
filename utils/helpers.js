@@ -19,13 +19,16 @@ module.exports = class Helpers {
     }
 
     async getObjectWithValue() {
-        let result = await request.post(`${this.endpoint}/api/scan/account/reward_slash`, {
+        const result = await request.post(`${this.endpoint}/api/scan/account/reward_slash`, {
             "X-API-Key": this.apiKey,
             "row": 20,
             "page": 0,
             "address": this.address
         });
-        result = result.body.data;
+        return this.handleData(result.body.data);
+    }
+
+    async handleData(result) {
         result.total_value_usd = 0;
         for(const index in result.list) {
             const timestamp = result.list[index].block_timestamp;
@@ -36,9 +39,16 @@ module.exports = class Helpers {
             result.list[index].usd_price_per_coin = priceAtTime;
             result.list[index].usd_value = valueOfRewardUSD;
             result.total_value_usd += valueOfRewardUSD;
+            result.list[index].date = new Date(result.list[index].block_timestamp * 1000).toDateString();
+            // delete irrelevant details
             delete result.list[index].params;
+            delete result.list[index].event_index;
+            delete result.list[index].event_idx;
+            delete result.list[index].block_num;
+            delete result.list[index].extrinsic_idx;
         }
         result.total_value_usd = parseFloat(result.total_value_usd.toFixed(2));
+
         return result;
     }
 
