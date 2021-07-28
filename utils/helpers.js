@@ -29,7 +29,7 @@ module.exports = class Helpers {
         try {
             const result = await request.post(`${this.endpoint}/api/scan/account/reward_slash`, {
                 "X-API-Key": this.apiKey,
-                "row": 20,
+                "row": 100,
                 "page": 0,
                 "address": this.address
             });
