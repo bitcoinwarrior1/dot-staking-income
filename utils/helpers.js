@@ -44,6 +44,7 @@ module.exports = class Helpers {
 
     async handleData(result) {
         result.total_value_usd = 0;
+        result[`total_value_${this.network}`] = 0;
         for(const index in result.list) {
             const timestamp = result.list[index].block_timestamp;
             const amount = result.list[index].amount;
@@ -53,8 +54,10 @@ module.exports = class Helpers {
             result.list[index].usd_price_per_coin = priceAtTime;
             result.list[index].usd_value = valueOfRewardUSD;
             result.total_value_usd += valueOfRewardUSD;
+            result[`total_value_${this.network}`] += result.list[index].amount;
             result.list[index].date = new Date(result.list[index].block_timestamp * 1000).toDateString();
             // delete irrelevant details
+            delete result.list[index].account;
             delete result.list[index].params;
             delete result.list[index].event_index;
             delete result.list[index].event_idx;
@@ -62,7 +65,6 @@ module.exports = class Helpers {
             delete result.list[index].extrinsic_idx;
         }
         result.total_value_usd = parseFloat(result.total_value_usd.toFixed(2));
-
         return result;
     }
 
