@@ -26,19 +26,34 @@ module.exports = class Helpers {
     }
 
     async getObjectWithValue() {
+        let index = 0;
+        const dataObj = {};
         try {
-            const result = await request.post(`${this.endpoint}/api/scan/account/reward_slash`, {
-                "X-API-Key": this.apiKey,
-                "row": 100,
-                "page": 0,
-                "address": this.address
-            });
-            return this.handleData(result.body.data);
+            while(true) {
+                const result = await request.post(`${this.endpoint}/api/scan/account/reward_slash`, {
+                    "X-API-Key": this.apiKey,
+                    "row": 100,
+                    "page": index,
+                    "address": this.address
+                });
+                const offset = index * 99;
+                index++;
+                if(result.body.data.list === null) break;
+                this.objCombine(result.body.data, dataObj, offset);
+                await this.timeout(1000);
+            }
         } catch (e) {
-            console.error(e);
-            // useful if throttled
-            await this.timeout(1000);
-            return this.getObjectWithValue();
+            return {error: e};
+        }
+
+        return this.handleData(dataObj);
+    }
+
+    objCombine(obj, variable, offset) {
+        for (let key of Object.keys(obj)) {
+            if (!variable[key]) variable[key] = {};
+            for (let innerKey of Object.keys(obj[key]))
+                variable[key][parseInt(innerKey) + offset] = obj[key][innerKey];
         }
     }
 
