@@ -45,7 +45,7 @@ module.exports = class Helpers {
         } catch (e) {
             return {error: e};
         }
-
+        dataObj.list = this.convertListObjToArray(dataObj.list);
         return this.handleData(dataObj);
     }
 
@@ -55,6 +55,14 @@ module.exports = class Helpers {
             for (let innerKey of Object.keys(obj[key]))
                 variable[key][parseInt(innerKey) + offset] = obj[key][innerKey];
         }
+    }
+
+    convertListObjToArray(dataObj) {
+        let dataAsArray = [];
+        for(let k in Object.keys(dataObj)) {
+            dataAsArray.push(dataObj[k]);
+        }
+        return dataAsArray;
     }
 
     async handleData(result) {
