@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
+    "test": "mocha --exit --recursive",
     "debug": "nodemon"
   },
   "repository": {
@@ -21,5 +22,8 @@
   "dependencies": {
     "express": "^4.17.1",
     "superagent": "^6.1.0"
+  },
+  "devDependencies": {
+    "chai": "^4.3.4"
   }
 }
