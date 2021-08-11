@@ -70,7 +70,7 @@ module.exports = class Helpers {
 
     async handleData(result) {
         try {
-            result.total_value_usd = 0;
+            result[`total_value_${this.currency}`] = 0;
             result[`total_value_${this.network}`] = 0;
             for(const index in result.list) {
                 const timestamp = result.list[index].block_timestamp;
@@ -80,7 +80,7 @@ module.exports = class Helpers {
                 const valueOfRewardFiat = parseFloat((priceAtTime * (amount / this.decimal)).toFixed(2)); // fiat is only 2dp
                 result.list[index][`${this.currency}_price_per_coin`] = priceAtTime;
                 result.list[index][`${this.currency}_value`] = valueOfRewardFiat;
-                result.total_value_usd += valueOfRewardFiat;
+                result[`total_value_${this.currency}`] += valueOfRewardFiat;
                 result[`total_value_${this.network}`] += result.list[index].amount;
                 result.list[index].date = new Date(result.list[index].block_timestamp * 1000).toDateString();
                 // delete irrelevant details
@@ -91,7 +91,7 @@ module.exports = class Helpers {
                 delete result.list[index].block_num;
                 delete result.list[index].extrinsic_idx;
             }
-            result.total_value_usd = parseFloat(result.total_value_usd.toFixed(2));
+            result[`total_value_${this.currency}`] = parseFloat(result[`total_value_${this.currency}`].toFixed(2));
             return result;
         } catch (e) {
             return e;
