@@ -1,6 +1,7 @@
 const request = require("superagent");
-const dotPrices = require("./prices/usd/dot-prices.json");
-const ksmPrices = require("./prices/usd/ksm-prices.json");
+const fs = require('fs');
+const dotPrices = require("./prices/usd/dot.json").prices;
+const ksmPrices = require("./prices/usd/ksm.json").prices;
 const endpoints = {
     "DOT": "https://polkadot.api.subscan.io",
     "KSM": "https://kusama.api.subscan.io"
@@ -20,8 +21,10 @@ module.exports = class Helpers {
         this.apiKey = process.env.API_KEY;
         if(this.network === "DOT") {
             this.prices = dotPrices;
+            this.coinName = "polkadot";
         } else {
             this.prices = ksmPrices;
+            this.coinName = "kusama";
         }
     }
 
@@ -100,33 +103,31 @@ module.exports = class Helpers {
         const date = new Date(time * 1000).setHours(0, 0, 0, 0);
         // TODO a bit inefficient to have to iterate each time
         for(const snapshot of this.prices) {
-            const snapshotTime = new Date(snapshot.snapped_at).setHours(0,0,0,0);
+            const snapshotTime = new Date(snapshot[0]).setHours(0,0,0,0);
             if(snapshotTime === date) {
-                const output = parseFloat(snapshot.price).toFixed(2);
+                const output = parseFloat(snapshot[1]).toFixed(2);
                 return parseFloat(output);
             }
         }
-        // only used if the price cannot be found in the JSON dump
-        return this.fetchPrices(time, amount, currency);
+        // if no prices are found, update the file and retry
+        await this.updatePrices(currency);
+        return this.getPrice(time, amount, currency);
     }
 
-    async fetchPrices(time, amount, currency) {
-        try {
-            const result = await request.post(`${this.endpoint}/api/open/price_converter`, {
-                "X-API-Key": this.apiKey,
-                "time": time,
-                "value": 1,
-                "from": this.network,
-                "quote": currency
+    async updatePrices(currency) {
+        const query = `https://api.coingecko.com/api/v3/coins/${this.coinName}/market_chart?vs_currency=${currency}&days=max`;
+        const result = await request.get(query);
+        const updatedDataset = JSON.stringify(result.body);
+        const fileName = `./utils/prices/usd/${this.network}.json`;
+        return new Promise((resolve, reject) => {
+            fs.writeFile(fileName, updatedDataset, function writeJSON(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve('updated ' + fileName);
+                }
             });
-            const output = parseFloat(result.body.data.output).toFixed(2);
-            return parseFloat(output);
-        } catch (e) {
-            console.error(e);
-            // useful if throttled
-            await this.timeout(1000);
-            return this.getPrice(time, amount, currency);
-        }
+        });
     }
     
 }
