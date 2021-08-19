@@ -10,6 +10,7 @@ async function main() {
         }
     } catch (e) {
         console.error(e);
+        // don't want to commit the price updates if it didn't succeed
         process.exit(-1);
     }
 }

@@ -10,6 +10,8 @@ const dotPricesEUR = require("./eur/dot.json");
 const ksmPricesEUR = require("./eur/ksm.json");
 const dotPricesSGD = require("./sgd/dot.json");
 const ksmPricesSGD = require("./sgd/ksm.json");
+const dotPricesNZD = require("./nzd/dot.json");
+const ksmPricesNZD = require("./nzd/ksm.json");
 
 module.exports = {
     usd: {
@@ -35,5 +37,9 @@ module.exports = {
     sgd: {
         DOT: dotPricesSGD,
         KSM: ksmPricesSGD
+    },
+    nzd: {
+        DOT: dotPricesNZD,
+        KSM: ksmPricesNZD
     }
 }
