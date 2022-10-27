@@ -1,6 +1,4 @@
 const request = require("superagent");
-const fs = require('fs').promises;
-const prices = require("./prices/prices");
 const endpoints = {
     "DOT": "https://polkadot.api.subscan.io",
     "KSM": "https://kusama.api.subscan.io"
@@ -24,12 +22,18 @@ module.exports = class Helpers {
         this.endpoint = endpoints[network];
         this.apiKey = process.env.API_KEY;
         this.currency = currency.toLowerCase();
+    }
+
+    /*
+    * @dev - get the latest prices from our scheduled server
+    * */
+    async initPrices() {
+        const data = await request.get("https://dot-tool-server.herokuapp.com/dot-staking-income/prices");
+        const formatted = JSON.parse(data.text);
         if(this.network === "DOT") {
-            this.coinName = "polkadot";
-            this.prices = prices[this.currency].DOT.prices;
+            this.prices = formatted[this.currency + "DOT"].prices;
         } else {
-            this.coinName = "kusama";
-            this.prices = prices[this.currency].KSM.prices;
+            this.prices = formatted[this.currency + "KSM"].prices;
         }
     }
 
@@ -58,6 +62,7 @@ module.exports = class Helpers {
             return {error: e};
         }
         dataObj.list = this.convertListObjToArray(dataObj.list);
+
         return this.getDataFormattedForCSV(dataObj);
     }
 
@@ -83,6 +88,7 @@ module.exports = class Helpers {
     * @returns - final result object for the user to download as a CSV
     * */
     async getDataFormattedForCSV(result) {
+        await this.initPrices();
         result = this.removeIrrelevantData(result);
         result[`total_value_${this.currency}`] = 0;
         result[`total_value_${this.network}`] = 0;
@@ -149,24 +155,6 @@ module.exports = class Helpers {
             }
         }
         throw "Could not find price";
-    }
-
-    /*
-    * @dev - updates the cached prices
-    * @param currency - the particular currency to update
-    * */
-    async updatePrices(currency) {
-        try {
-            const query = `https://api.coingecko.com/api/v3/coins/${this.coinName}/market_chart?vs_currency=${currency}&days=max`;
-            const result = await request.get(query);
-            const updatedDataset = JSON.stringify(result.body);
-            const fileName = `./utils/prices/${this.currency}/${this.network}.json`;
-            await fs.writeFile(fileName, updatedDataset);
-            console.log(`Updated prices for ${currency}`);
-        } catch (e) {
-            console.error(e);
-            throw e;
-        }
     }
     
 }
