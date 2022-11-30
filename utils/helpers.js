@@ -93,10 +93,9 @@ module.exports = class Helpers {
         result[`total_value_${this.currency}`] = 0;
         result[`total_value_${this.network}`] = 0;
         for(const index in result.list) {
-            const timestamp = result.list[index].block_timestamp;
-            const amount = result.list[index].amount;
+            const { block_timestamp, amount } = result.list[index];
             try {
-                const priceAtTime = await this.getPriceAtTime(timestamp);
+                const priceAtTime = await this.getPriceAtTime(block_timestamp);
                 result.list[index].amount = amount / this.decimal;
                 const valueOfRewardFiat = parseFloat((priceAtTime * (amount / this.decimal)).toFixed(2));
                 result.list[index][`${this.currency}_price_per_coin`] = priceAtTime;
@@ -106,13 +105,40 @@ module.exports = class Helpers {
                 result.list[index].date = new Date(result.list[index].block_timestamp * 1000).toDateString();
             } catch {
                 delete result.list[index];
-                console.log(`No price found for ${timestamp}`);
+                console.log(`No price found for ${block_timestamp}`);
             }
         }
+        result = await this.addNominationPoolRewards(result);
         result[`total_value_${this.currency}`] = parseFloat(result[`total_value_${this.currency}`].toFixed(2));
         result.list = result.list.filter(x => x !== null);
 
         return result;
+    }
+
+    async addNominationPoolRewards(result) {
+        try {
+            const data = await request.post(`${this.endpoint}/api/scan/nomination_pool/rewards`, {
+                "X-API-Key": this.apiKey,
+                "address": this.address
+            });
+            const { list } = data.body.data;
+            for(let tx of list) {
+                const { amount, block_timestamp, module_id, extrinsic_index, extrinsic_hash, event_id, event_method  } = tx;
+                const priceAtTime = await this.getPriceAtTime(block_timestamp);
+                const valueOfRewardFiat = parseFloat((priceAtTime * (amount / this.decimal)).toFixed(2));
+                const eventObj = { amount: amount / this.decimal, block_timestamp, module_id, extrinsic_index, extrinsic_hash, event_id, event_method };
+                eventObj[`${this.currency}_price_per_coin`] = priceAtTime;
+                eventObj[`${this.currency}_value`] = valueOfRewardFiat;
+                eventObj.date = new Date(block_timestamp * 1000).toDateString();
+                result.list.push(eventObj);
+                result[`total_value_${this.currency}`] += valueOfRewardFiat;
+                result[`total_value_${this.network}`] += amount / this.decimal;
+            }
+            return result;
+        } catch (e) {
+            console.error(e);
+            return result;
+        }
     }
 
     /*
