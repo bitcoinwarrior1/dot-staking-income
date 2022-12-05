@@ -14,14 +14,18 @@ module.exports = class Helpers {
     * @param address - the address of the user
     * @param network - the network to check for staking income
     * @param currency - the fiat currency to use
+    * @param fromDate - the date to start at
+    * @param toDate - the date to finish at
     * */
-    constructor(address, network, currency) {
+    constructor(address, network, currency, fromDate = 0, toDate = 0) {
         this.address = address;
         this.network = network;
         this.decimal = decimals[network];
         this.endpoint = endpoints[network];
         this.apiKey = process.env.API_KEY;
         this.currency = currency.toLowerCase();
+        this.from = fromDate;
+        this.to = toDate;
     }
 
     /*
@@ -94,18 +98,23 @@ module.exports = class Helpers {
         result[`total_value_${this.network}`] = 0;
         for(const index in result.list) {
             const { block_timestamp, amount } = result.list[index];
-            try {
-                const priceAtTime = await this.getPriceAtTime(block_timestamp);
-                result.list[index].amount = amount / this.decimal;
-                const valueOfRewardFiat = parseFloat((priceAtTime * (amount / this.decimal)).toFixed(2));
-                result.list[index][`${this.currency}_price_per_coin`] = priceAtTime;
-                result.list[index][`${this.currency}_value`] = valueOfRewardFiat;
-                result[`total_value_${this.currency}`] += valueOfRewardFiat;
-                result[`total_value_${this.network}`] += result.list[index].amount;
-                result.list[index].date = new Date(result.list[index].block_timestamp * 1000).toDateString();
-            } catch {
+            // check it is within the date range, else remove
+            if (this.from === 0 || this.from <= block_timestamp && this.to >= block_timestamp) {
+                try {
+                    const priceAtTime = await this.getPriceAtTime(block_timestamp);
+                    result.list[index].amount = amount / this.decimal;
+                    const valueOfRewardFiat = parseFloat((priceAtTime * (amount / this.decimal)).toFixed(2));
+                    result.list[index][`${this.currency}_price_per_coin`] = priceAtTime;
+                    result.list[index][`${this.currency}_value`] = valueOfRewardFiat;
+                    result[`total_value_${this.currency}`] += valueOfRewardFiat;
+                    result[`total_value_${this.network}`] += result.list[index].amount;
+                    result.list[index].date = new Date(result.list[index].block_timestamp * 1000).toDateString();
+                } catch {
+                    delete result.list[index];
+                    console.log(`No price found for ${block_timestamp}`);
+                }
+            } else {
                 delete result.list[index];
-                console.log(`No price found for ${block_timestamp}`);
             }
         }
         result = await this.addNominationPoolRewards(result);
@@ -124,15 +133,26 @@ module.exports = class Helpers {
             const { list } = data.body.data;
             for(let tx of list) {
                 const { amount, block_timestamp, module_id, extrinsic_index, extrinsic_hash, event_id, event_method  } = tx;
-                const priceAtTime = await this.getPriceAtTime(block_timestamp);
-                const valueOfRewardFiat = parseFloat((priceAtTime * (amount / this.decimal)).toFixed(2));
-                const eventObj = { amount: amount / this.decimal, block_timestamp, module_id, extrinsic_index, extrinsic_hash, event_id, event_method };
-                eventObj[`${this.currency}_price_per_coin`] = priceAtTime;
-                eventObj[`${this.currency}_value`] = valueOfRewardFiat;
-                eventObj.date = new Date(block_timestamp * 1000).toDateString();
-                result.list.push(eventObj);
-                result[`total_value_${this.currency}`] += valueOfRewardFiat;
-                result[`total_value_${this.network}`] += amount / this.decimal;
+                // ignore if not within the date range set
+                if (this.from === 0 || this.from <= block_timestamp && this.to >= block_timestamp) {
+                    const priceAtTime = await this.getPriceAtTime(block_timestamp);
+                    const valueOfRewardFiat = parseFloat((priceAtTime * (amount / this.decimal)).toFixed(2));
+                    const eventObj = {
+                        amount: amount / this.decimal,
+                        block_timestamp,
+                        module_id,
+                        extrinsic_index,
+                        extrinsic_hash,
+                        event_id,
+                        event_method
+                    };
+                    eventObj[`${this.currency}_price_per_coin`] = priceAtTime;
+                    eventObj[`${this.currency}_value`] = valueOfRewardFiat;
+                    eventObj.date = new Date(block_timestamp * 1000).toDateString();
+                    result.list.push(eventObj);
+                    result[`total_value_${this.currency}`] += valueOfRewardFiat;
+                    result[`total_value_${this.network}`] += amount / this.decimal;
+                }
             }
             return result;
         } catch (e) {
@@ -172,7 +192,6 @@ module.exports = class Helpers {
     async getPriceAtTime(time) {
         // coingecko uses zero hour time snapshots
         const date = new Date(time * 1000).setHours(0, 0, 0, 0);
-        // TODO a bit inefficient to have to iterate each time
         for(const snapshot of this.prices) {
             const snapshotTime = new Date(snapshot[0]).setHours(0,0,0,0);
             if(snapshotTime === date) {
